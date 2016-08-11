@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Insert title here</title>
+
+		<script type="text/javascript" src="./dest/SlashCanvas2.js"></script>
+	</head>
+	<body>
+		<div id="main"></div>
+		<div id="sub1"></div>
+
+		<script>
+		// 第一引数に設置先タグのID、第二引数にオプションを渡す
+		new SlashCanvas2("main", {
+			svgSource : "./resouce/okadablog.svg",		// SVGファイルパス
+			sound : "./resouce/katana-gesture1.wav",	// スラッシュ音声ファイルパス
+			width : 600,								// フィールド幅
+			height : 400,								// フィールド高さ
+			gravityX : 0,								// 横方向重力
+			gravityY : 0.0,								// 縦方向重力
+			svgScale : 1 / 2,							// SVG座標のスケール調整
+			svgShift : {
+				x : 30,
+				y : -150
+			},											// SVG座標の移動(スケール調整後に実施)
+			slashMovementPower : 1,						// スラッシュ時の動きの強さ
+			slashLineColor : "red",						// スラッシュ線カラー
+		});
+
+		new SlashCanvas2("sub1", {
+			svgSource : "./resouce/okadablog.svg",
+			width : 600,
+			height : 600,
+			gravityX : 0,
+			gravityY : 0.1,
+			sound : "./resouce/katana-gesture1.wav",
+			svgScale : 1 / 2,
+			svgShift : {
+				x : 30,
+				y : -150
+			},
+			slashMovementPower : 1,
+		});
+		</script
+	</body>
+</html>
