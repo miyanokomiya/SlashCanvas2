@@ -77,13 +77,13 @@ define([], function(){
 		 * @method vecUnit2D
 		 * @param v {vector} 座標v
 		 * @return {vector} vの単位ベクトル
-		 * @throws {exception} vがゼロベクトルだった場合に発行
+		 * @throws {Error} vがゼロベクトルだった場合に発行
 		 */
 		vecUnit2D : function(v){
 			var d = this.length2D(v);
 
 			if (Math.abs(d) < this.MINVALUE) {
-				throw new Exception("Unit vector cannot be calced from zero vector.");
+				throw new Error("Unit vector cannot be calced from zero vector.");
 			}
 
 			return this.vecMult2D(v, 1/d);
@@ -693,12 +693,12 @@ define([], function(){
 				a = self.rotate2D(a, -rad);
 				b = self.rotate2D(b, -rad);
 
-				return a.x < b.x;
+				return a.x - b.x;
 			});
 
 			// 面の辺と同一ではないものを採用
 			var targetSection = [];
-			for (var k = 0; k < crossList.length - 1; k += 2) {
+			for (var k = 0; k < crossList.length - 1;) {
 				var section = [crossList[k], crossList[k + 1]];
 				var sameSeg = false;
 
@@ -715,6 +715,8 @@ define([], function(){
 					targetSection = section;
 					break;
 				}
+
+				k += 2;
 			}
 
 			if (targetSection.length !== 2) {
@@ -723,8 +725,14 @@ define([], function(){
 
 			// 除外対象回収
 			var dropList = crossList.concat();
-			dropList.splice(dropList.indexOf(targetSection[0]), 1);
-			dropList.splice(dropList.indexOf(targetSection[1]), 1);
+			var tmpIndex = dropList.indexOf(targetSection[0]);
+			if (tmpIndex !== -1) {
+				dropList.splice(tmpIndex, 1);
+			}
+			tmpIndex = dropList.indexOf(targetSection[1]);
+			if (tmpIndex !== -1) {
+				dropList.splice(tmpIndex, 1);
+			}
 			var tmpList = points.concat();
 			dropList.forEach(function(p) {
 				// 除外
@@ -737,6 +745,10 @@ define([], function(){
 
 			var i0 = points.indexOf(crossList[0]);
 			var i1 = points.indexOf(crossList[1]);
+
+			if (i0 === -1 || i1 === -1) {
+				return [];
+			}
 
 			crossIndex = [];
 			crossIndex[0] = Math.min(i0, i1);
@@ -816,15 +828,9 @@ define([], function(){
 		 * @return {vector[][]} 分割面リスト
 		 */
 		triangleSplit : function(polygon) {
+			var self = this;
 			// 時計周りに揃える
 			polygon = this.convertLoopwise(polygon);
-
-			// 原点からの距離リスト
-			var distanceList = [];
-			polygon.forEach(function(p) {
-				var d = this.length2D(p);
-				distanceList.push(d);
-			}, this);
 
 			// ポリゴン複製
 			var targetPoly = polygon.concat();
@@ -839,7 +845,11 @@ define([], function(){
 			// ループ
 			while (targetPoly.length >= 3) {
 				// 最遠点インデックス取得
-				farthestIndex = distanceList.indexOf(Math.max.apply(null, distanceList));
+				var sorted = targetPoly.concat()
+				sorted.sort(function(a, b) {
+					return self.length2D(b) - self.length2D(a);
+				})
+				farthestIndex = targetPoly.indexOf(sorted[0]);
 
 				// 分割実行
 				var tri = this._getTriangle(targetPoly, farthestIndex);
@@ -868,11 +878,9 @@ define([], function(){
 
 					// 採用された点を削除
 					targetPoly.splice(index, 1);
-					distanceList.splice(index, 1);
 				} else {
 					// 最遠点削除
 					targetPoly.splice(farthestIndex, 1);
-					distanceList.splice(farthestIndex, 1);
 				}
 				triangleList.push(tri);
 			}
@@ -965,11 +973,11 @@ define([], function(){
 		 * @return {vector[]} 時計回りにした面(引数とは別配列にする)
 		 */
 		convertLoopwise : function(polygon) {
+			var ret = polygon.concat();
 			if (this.loopwise(polygon) === -1) {
-				return polygon.concat().reverse();
-			} else {
-				return polygon.concat();
+				ret.reverse();
 			}
+			return ret;
 		},
 
 		/**
