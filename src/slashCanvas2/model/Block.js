@@ -1,8 +1,8 @@
 define(function(require) {
 	var Matter = require("matter");
 	var Body = Matter.Body;
-	var svgUtil = require("slashCanvas2/common/svgUtil");
-	var mathUtil = require("slashCanvas2/common/mathUtil");
+	var svgUtil = require("common/svgUtil");
+	var mathUtil = require("common/mathUtil");
 
 	/**
 	 * ブロッククラス
@@ -93,9 +93,17 @@ define(function(require) {
 	 * 座標リストからbody作成
 	 * @method createBody
 	 * @param points {vector[]} 座標リスト
+	 * @param style {} スタイル情報
 	 */
-	Constructor.prototype.createBody = function(points) {
+	Constructor.prototype.createBody = function(points, style) {
 		var bodyList = [];
+
+		// スタイル継承
+		if (style) {
+			for (var key in style) {
+				this.style[key] = style[key];
+			}
+		}
 
 		// 同一座標オミット
 		points = mathUtil.omitSamePoint(points);
@@ -115,37 +123,6 @@ define(function(require) {
 		this.body = compBody;
 		this.pointList = points.concat();
 		this.initialPosition = mathUtil.pointCopy2D(this.body.position);
-	};
-
-	/**
-	 * SVGのpathタグからロードする
-	 * @method loadSvgPath
-	 * @param svgPath {} SVGのpathタグDOM
-	 * @param scale {number} 座標のスケール調整値
-	 * @param shift {vector} 座標の移動調整(スケール調整後に実施)
-	 */
-	Constructor.prototype.loadSvgPath = function(svgPath, scale, shift) {
-		// スタイルロード
-		var style = svgUtil.parsePathStyle(svgPath);
-		for (var key in style) {
-			this.style[key] = style[key];
-		}
-
-		// 座標ロード
-		var points = svgUtil.parsePath(svgPath);
-		// 座標調整
-		scale = scale || 1;
-		shift = shift || {x:0,y:0};
-		points.forEach(function(p) {
-			// スケール→位置の順
-			p.x *= scale;
-			p.y *= scale;
-			p.x += shift.x;
-			p.y += shift.y;
-		}, this);
-
-		// bodyｓ作成
-		this.createBody(points);
 	};
 
 	/**
@@ -296,11 +273,13 @@ define(function(require) {
 	//
 
 	Constructor.prototype.onPaint = function(ctx) {
-		ctx.strokeStyle = this.style.strokeStyle;
-		ctx.lineWidth = this.style.lineWidth;
-		ctx.lineJoin = this.style.lineJoin;
-		ctx.fillStyle = this.style.fillStyle;
-		ctx.setLineDash(this.style.lineDash);
+		var style = this.style;
+
+		ctx.strokeStyle = style.strokeStyle;
+		ctx.lineWidth = style.lineWidth;
+		ctx.lineJoin = style.lineJoin;
+		ctx.fillStyle = style.fillStyle;
+		ctx.setLineDash(style.lineDash);
 
 		ctx.beginPath();
 		if (this.pointList.length > 1) {
@@ -313,10 +292,14 @@ define(function(require) {
 			}, this);
 		}
 		ctx.closePath();
-		ctx.globalAlpha = this.style.fillGlobalAlpha;
-		ctx.fill();
-		ctx.globalAlpha = this.style.strokeGlobalAlpha;
-		ctx.stroke();
+		if (style.fill) {
+			ctx.globalAlpha = style.fillGlobalAlpha;
+			ctx.fill();
+		}
+		if (style.stroke) {
+			ctx.globalAlpha = style.strokeGlobalAlpha;
+			ctx.stroke();
+		}
 		ctx.globalAlpha = 1;
 	};
 

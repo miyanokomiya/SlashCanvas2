@@ -1,4 +1,4 @@
-define([], function(){
+define(function(){
 	/**
 	 * 数学計算クラス
 	 * @class mathUtil
@@ -1016,10 +1016,11 @@ define([], function(){
 		},
 
 		/**
-		 * ベジェ曲線を直線で近似する
+		 * ベジェ曲線を直線で近似する(３次まで対応)
 		 * @method approximateBezier
 		 * @param pointList {vector[]} 制御点リスト
 		 * @param size {number} 分割数(1なら制御点両端のみ)
+		 * @return {vector[]} 座標リスト
 		 */
 		approximateBezier : function(pointList, size) {
 			var ret = [];
@@ -1064,6 +1065,77 @@ define([], function(){
 					ret.push(p);
 				}
 			}
+
+			return ret;
+		},
+
+		/**
+		 * 円弧を直線で近似する
+		 * @method approximateArc
+		 * @param rx {number} x軸半径
+		 * @param ry {number} y軸半径
+		 * @param startRadian {number} 開始ラジアン
+		 * @param endRadian {number} 終了ラジアン
+		 * @param center {vector} 中心座標
+		 * @param radian {number} 傾き
+		 * @param size {number} 分割数
+		 * @return {vector[]} 座標リスト
+		 */
+		approximateArc : function(rx, ry, startRadian, endRadian, center, radian, size) {
+			var ret = [];
+			var i = 0;
+			var p = null;
+			var t = 0;
+
+			// 近似範囲
+			var range = endRadian - startRadian;
+			// 近似単位
+			var unitT = range / size;
+
+			for (i = 0; i < size; i++) {
+				t = unitT * i + startRadian;
+				p = {
+					x : rx * Math.cos(t),
+					y : ry * Math.sin(t),
+				};
+				ret.push(p);
+			}
+
+			// 位置調整
+			ret.forEach(function(p) {
+				p.x += center.x;
+				p.y += center.y;
+			}, this);
+
+			return ret;
+		},
+
+		/**
+		 * ２次元アフィン変換を行う<br>
+		 * paramsには以下の行列をa b c d e fの順で指定する<br>
+		 * a c e<br>
+		 * b d f
+		 * @method transform2D
+		 * @param points {vector[]} 変換前の座標リスト
+		 * @param params {number[6]} 行列成分
+		 * @return {vector[]} 座標リスト
+		 */
+		transform2D : function(points, params) {
+			var ret = [];
+			var a = params[0];
+			var b = params[1];
+			var c = params[2];
+			var d = params[3];
+			var e = params[4];
+			var f = params[5];
+
+			points.forEach(function(p) {
+				var converted = {
+					x : a * p.x + c * p.y + e,
+					y : b * p.x + d * p.y + f
+				};
+				ret.push(converted);
+			}, this);
 
 			return ret;
 		},

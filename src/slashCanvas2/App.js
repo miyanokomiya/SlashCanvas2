@@ -15,11 +15,11 @@ define(function(require) {
 		Svg = Matter.Svg,
 		MouseConstraint = Matter.MouseConstraint;
 
-	var Sound = require("slashCanvas2/common/Sound");
+	var Sound = require("common/Sound");
 	var Block = require("slashCanvas2/model/Block");
-	var mathUtil = require("slashCanvas2/common/mathUtil");
-	var svgUtil = require("slashCanvas2/common/svgUtil");
-	var canvasUtil = require("slashCanvas2/common/canvasUtil");
+	var mathUtil = require("common/mathUtil");
+	var svgUtil = require("common/svgUtil");
+	var canvasUtil = require("common/canvasUtil");
 
 	/**
 	 * スラッシュキャンバス2本体
@@ -189,31 +189,26 @@ define(function(require) {
 		// SVGリソース取得
 		var req = new XMLHttpRequest();
 		req.open("get", this.svgSource, true);
-		req.onload = function(){
-			var dom_parser = new DOMParser();
-			var svgDom = null;
-			try {
-				svgDom = dom_parser.parseFromString(req.responseText, "application/xml");
-			} catch (e) {
-				console.log("This svg resouce is invalid to parse.");
+		req.onload = function() {
+			// パース
+			var svgInfoList = svgUtil.loadSvgGraphicsPath(req.responseText);
+
+			// ブロック作成
+			var bodyList = [];
+			for (var i = 0; i < svgInfoList.length; i++) {
+				var info = svgInfoList[i];
+				// 座標調整
+				info.pointList.forEach(function(p) {
+					p.x = p.x * self.svgScale + self.svgShift.x;
+					p.y = p.y * self.svgScale + self.svgShift.y;
+				});
+				block = new Block();
+				block.createBody(info.pointList, info.style);
+				self.blockList.push(block);
+				bodyList = bodyList.concat(block.body);
 			}
 
-			if (svgDom) {
-				var tagG = svgDom.getElementsByTagName("g")[0];
-				var tagPathList = tagG.getElementsByTagName("path");
-
-				var bodyList = [];
-
-				for (var i = 0; i < tagPathList.length; i++) {
-					var block = new Block();
-					block.loadSvgPath(tagPathList[i], self.svgScale, self.svgShift);
-
-					self.blockList.push(block);
-					bodyList = bodyList.concat(block.body);
-				}
-
-				World.add(self.engine.world, bodyList);
-			}
+			World.add(self.engine.world, bodyList);
 
 			self.bindCanvasEvent(self.render.canvas);
 		};

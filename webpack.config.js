@@ -15,7 +15,7 @@ module.exports = {
 			// { test: /\.html$/, loader: 'html' }
 		]
 	},
-	//	devtool: 'source-map',
+	//devtool: 'source-map',
 	resolve : {
 		root : "./src/",
 		alias : {
