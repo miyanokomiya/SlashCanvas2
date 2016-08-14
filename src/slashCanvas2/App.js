@@ -167,11 +167,32 @@ define(function(require) {
 		this.slashLineColor = option.slashLineColor || "yellow";
 
 		//
-		// Blockクラスのオプション
+		// UI系
 		//
-		if (!isNaN(option.slashMovementPower)) {
-		Block.prototype.slashMovementPower = option.slashMovementPower;
-		}
+
+		/**
+		 * モード種類
+		 * @property modeType
+		 * @type {string}
+		 * @defalut {"slash"};
+		 */
+		this.modeType = option.modeType === "pick" ? "pick" : "slash";
+
+		/**
+		 * SVG出力
+		 * @property outputSvg
+		 * @type {bool}
+		 * @defalut {false};
+		 */
+		this.outputSvg = option.outputSvg || false;
+
+		/**
+		 * オプション
+		 * @property option
+		 * @type {}
+		 * @default {}
+		 */
+		this.option = option;
 
 		// 初期化
 		this.init();
@@ -203,6 +224,7 @@ define(function(require) {
 					p.y = p.y * self.svgScale + self.svgShift.y;
 				});
 				block = new Block();
+				block.slashMovementPower = self.option.slashMovementPower;
 				block.createBody(info.pointList, info.style);
 				self.blockList.push(block);
 				bodyList = bodyList.concat(block.body);
@@ -210,7 +232,10 @@ define(function(require) {
 
 			World.add(self.engine.world, bodyList);
 
-			self.bindCanvasEvent(self.render.canvas);
+			self.initButton();
+			if (self.modeType === "slash") {
+				self.bindCanvasEvent(self.render.canvas);
+			}
 		};
 		req.send(null);
 	};
@@ -285,13 +310,15 @@ define(function(require) {
 
 		World.clear(this.engine.world);
 		Engine.clear(this.engine);
-		/*
-		var mc = MouseConstraint.create(this.engine, {
-			element : this.render.canvas
-		});
 
-		World.add(this.engine.world, mc);
-		*/
+		// ピックモードの場合
+		if (this.modeType === "pick") {
+			var mc = MouseConstraint.create(this.engine, {
+				element : this.render.canvas
+			});
+			World.add(this.engine.world, mc);
+		}
+
 		// 矩形で枠線を作る(rectangle(x座標,y座標,横幅,縦幅,option))
 		var frameWidth = this.width;
 		var frameHeight = this.height;
@@ -333,6 +360,75 @@ define(function(require) {
 	};
 
 	/**
+	 * SVG出力を行う
+	 * @method serializeSvg
+	 * @return {string} SVG文字列
+	 */
+	Constructor.prototype.serializeSvg = function() {
+		// 情報を収集
+		var infoList = [];
+		this.blockList.forEach(function(block) {
+			var info = {
+				pointList : block.getOriginalPointList(),
+				style : block.style
+			};
+			infoList.push(info);
+		}, this);
+
+		// 文字列にシリアライズ
+		var svgStr = svgUtil.serializeSvgString(infoList);
+		return svgStr;
+	};
+
+	/**
+	 * ボタン初期化
+	 * @method initButton
+	 */
+	Constructor.prototype.initButton = function() {
+		var self = this;
+		var $bSvg = null;
+		var $textSvg = null;
+
+		if (this.outputSvg) {
+			// 出力場所
+			$textSvg = $("<textarea>");
+			// 出力ボタン
+			$bSvg = $("<input>");
+			$bSvg.attr("type", "button");
+			$bSvg.val("To SVG");
+			$bSvg.on("click", function(e) {
+				var svgStr = self.serializeSvg();
+				$textSvg.val(svgStr);
+			});
+		}
+
+		if ($bSvg) {
+			$("#" + this.rootDomId).append($("<br>"));
+		}
+		if ($bSvg) {
+			$("#" + this.rootDomId).append($bSvg);
+		}
+		if ($textSvg) {
+			$("#" + this.rootDomId).append($textSvg);
+		}
+	};
+
+	/**
+	 * キャンバスへのイベントハンドラ解除
+	 * @method offCanvasEvent
+	 * @param target {} イベントハンドラ設定先
+	 */
+	Constructor.prototype.offCanvasEvent = function(target) {
+		$(target).off("mousedown.slash");
+		$(target).off("touchstart.slash");
+		$(target).off("mousemove.slash");
+		$(target).off("touchmove.slash");
+		$(target).off("mouseup.slash");
+		$(target).off("touchend.slash");
+		$(target).off("touchcancel.slash");
+	};
+
+	/**
 	 * キャンバスへのイベントハンドラ
 	 * @method bindCanvasEvent
 	 * @param target {} イベントハンドラ設定先
@@ -345,13 +441,13 @@ define(function(require) {
 
 		var length = this.width * this.width + this.height * this.height;
 
-		$(target).on("mousedown touchstart", function(e) {
+		$(target).on("mousedown.slash touchstart.slash", function(e) {
 			// 始点記録
 			slash.length = 0;
 			slash[0] = canvasUtil.getCursorPoint(e);
 		});
 
-		$(target).on("mousemove touchmove", function(e) {
+		$(target).on("mousemove.slash touchmove.slash", function(e) {
 			e.preventDefault();
 
 			// 終点記録
@@ -360,7 +456,7 @@ define(function(require) {
 			}
 		});
 
-		$(target).on("mouseup touchend touchcancel", function(e) {
+		$(target).on("mouseup.slash touchend.slash touchcancel.slash", function(e) {
 			if (slash.length > 1) {
 				// 長さチェック
 				var vec = mathUtil.vecSub2D(slash[0], slash[1]);
@@ -396,6 +492,8 @@ define(function(require) {
 					var p2 = mathUtil.vecAdd2D(slash[1], vec);
 
 					self.slashLineList.push({s : p1, e : p2, life : 60});
+
+					self.serializeSvg();
 				}
 			}
 

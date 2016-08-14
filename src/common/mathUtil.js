@@ -1093,13 +1093,20 @@ define(function(){
 			var unitT = range / size;
 
 			for (i = 0; i < size; i++) {
-				t = unitT * i + startRadian;
+				t = unitT * i + startRadian - radian;
 				p = {
 					x : rx * Math.cos(t),
 					y : ry * Math.sin(t),
 				};
 				ret.push(p);
 			}
+
+			// 回転考慮
+			ret.forEach(function(p) {
+				var rotated = this.rotate2D(p, radian);
+				p.x = rotated.x;
+				p.y = rotated.y;
+			}, this);
 
 			// 位置調整
 			ret.forEach(function(p) {
@@ -1108,6 +1115,175 @@ define(function(){
 			}, this);
 
 			return ret;
+		},
+
+		/**
+		 * ２点指定の円弧を直線で近似する
+		 * @method approximateArcWithPoint
+		 * @param rx {number} x軸半径
+		 * @param ry {number} y軸半径
+		 * @param startPoint {vector} 開始点
+		 * @param endPoint {vector} 終了点
+		 * @param largeArcFlag {number} 円弧の大きい側を使うフラグ
+		 * @param sweepFlag {number} 時計回り円弧を使うフラグ
+		 * @param radian {number} 傾き
+		 * @param size {number} 分割数
+		 * @return {vector[]} 座標リスト
+		 */
+		approximateArcWithPoint : function(rx, ry, startPoint, endPoint, largeArcFlag, sweepFlag, radian, size) {
+			// 楕円中心取得
+			var centers = mathUtil.getEllipseCenter(startPoint, endPoint, rx, ry, radian);
+
+			var center = null;
+
+			if ((largeArcFlag && sweepFlag) || (!largeArcFlag && !sweepFlag)) {
+				// 時計回り＆大きい側
+				// 反時計回り＆小さい側
+				// →始点終点中心が反時計回りになる
+				if (this.loopwise([startPoint, endPoint, centers[0]]) < 0) {
+					center = centers[0];
+				} else {
+					center = centers[1];
+				}
+			} else {
+				if (this.loopwise([startPoint, endPoint, centers[0]]) > 0) {
+					center = centers[0];
+				} else {
+					center = centers[1];
+				}
+			}
+
+			// 回り方に応じて始点と終点を設定
+			var startRadian = 0;
+			var endRadian = 0;
+			var r1 = mathUtil.getRadianOnArc(startPoint, rx, ry, center, radian);
+			var r2 = mathUtil.getRadianOnArc(endPoint, rx, ry, center, radian);
+			if (sweepFlag) {
+				if (r1 > r2) {
+					startRadian = r1 - Math.PI * 2;
+					endRadian = r2;
+				} else {
+					startRadian = r1;
+					endRadian = r2;
+				}
+			} else {
+				if (r1 > r2) {
+					startRadian = r1;
+					endRadian = r2;
+				} else {
+					startRadian = r1;
+					endRadian = r2 - Math.PI * 2;
+				}
+			}
+
+			pList = mathUtil.approximateArc(
+				rx, ry,
+				startRadian,
+				endRadian,
+				centers[0],
+				radian, size);
+
+			return pList;
+		},
+
+		/**
+		 * 円弧上の点の角度を求める
+		 * @method getRadianOnArc
+		 * @param a {vector} 円弧上の点
+		 * @param rx {number} x軸半径
+		 * @param ry {number} y軸半径
+		 * @param center {vector} 中心座標
+		 * @param radian {number} 傾き
+		 * @return {number} ラジアン(0 <= t <= 2 * Math.PI)
+		 */
+		getRadianOnArc : function(a, rx, ry, center, radian) {
+			// 回転打ち消し
+			a = this.rotate2D(a, -radian, center);
+			var ret = Math.acos((a.x - center.x) / rx);
+
+			// y座標の位置をみて絞り込み
+			if (a.y - center.y < 0) {
+				ret = -ret + Math.PI * 2;
+			}
+
+			// 回転戻す
+			ret += radian;
+			ret %= Math.PI * 2;
+
+			return ret;
+		},
+
+		/**
+		 * ２点を通る楕円の中心を求める
+		 * @method getEllipseCenter
+		 * @param a {vector} 点a
+		 * @param b {vector} 点b
+		 * @param rx {number} x軸半径
+		 * @param ry {number} y軸半径
+		 * @param radian {number} 傾き
+		 * @return {vector[]} 解となる２点
+		 */
+		getEllipseCenter : function(a, b, rx, ry, radian) {
+			// 回転を打ち消す
+			a = this.rotate2D(a, -radian);
+			b = this.rotate2D(b, -radian);
+
+			// 媒介変数を利用して円の中心問題にする
+			var A = {
+				x : a.x / rx,
+				y : a.y / ry,
+			};
+			var B = {
+				x : b.x / rx,
+				y : b.y / ry,
+			};
+
+			// 円の中心取得
+			var C = this.getCircleCenter(A, B, 1);
+
+			// 楕円に戻す
+			var ans1 = {
+				x : C[0].x * rx,
+				y : C[0].y * ry,
+			};
+			var ans2 = {
+				x : C[1].x * rx,
+				y : C[1].y * ry,
+			};
+
+			// 回転を戻す
+			ans1 = this.rotate2D(ans1, radian);
+			ans2 = this.rotate2D(ans2, radian);
+
+			return [ans1, ans2];
+		},
+
+		/**
+		 * ２点を通る円の中心を求める
+		 * @method getCircleCenter
+		 * @param a {vector} 点a
+		 * @param b {vector} 点b
+		 * @param radius {number} 半径
+		 * @return {vector[]} 解となる２点
+		 */
+		getCircleCenter : function(a, b, radius) {
+			var u1 = (a.x + b.x) / 2;
+			var u2 = (a.x - b.x) / 2;
+			var v1 = (a.y + b.y) / 2;
+			var v2 = (a.y - b.y) / 2;
+			var L = Math.sqrt(u2 * u2 + v2 * v2);
+			var t = Math.sqrt(Math.pow((radius / L), 2) - 1);
+
+			var ans1 = {
+				x : u1 + v2 * t,
+				y : v1 - u2 * t,
+			};
+			var ans2 = {
+				x : u1 - v2 * t,
+				y : v1 + u2 * t,
+			};
+
+			return [ans1, ans2];
 		},
 
 		/**

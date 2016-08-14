@@ -13,7 +13,7 @@ define(function(require) {
 		 * @type {number}
 		 * @default 5
 		 */
-		BEZIER_SPLIT_COUNT : 5,
+		BEZIER_SPLIT_COUNT : 10,
 
 		/**
 		 * 楕円を何本の直線で近似するか
@@ -34,7 +34,7 @@ define(function(require) {
 			var dom_parser = new DOMParser();
 			var svgDom = null;
 			try {
-				svgDom = dom_parser.parseFromString(svgString, "application/xml");
+				svgDom = dom_parser.parseFromString(svgString, "image/svg+xml");
 			} catch (e) {
 				console.log("This svg resouce is invalid to parse.");
 				throw e;
@@ -293,6 +293,7 @@ define(function(require) {
 				var b1 = null;
 				var b2 = null;
 				var b3 = null;
+				var centers = null;
 
 				switch (current.command) {
 					case "M":
@@ -328,6 +329,10 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2], this.BEZIER_SPLIT_COUNT);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b2;
 						break;
 					case "q" :
 						// 制御点準備
@@ -342,6 +347,10 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2], this.BEZIER_SPLIT_COUNT);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b2;
 						break;
 					case "T" :
 						// 制御点準備
@@ -353,6 +362,10 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2], this.BEZIER_SPLIT_COUNT);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b2;
 						break;
 					case "t" :
 						// 制御点準備
@@ -364,6 +377,10 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2], this.BEZIER_SPLIT_COUNT);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b2;
 						break;
 					case "C" :
 						// 制御点準備
@@ -382,7 +399,10 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2, b3], this.BEZIER_SPLIT_COUNT);
-						pList.splice(0, 1);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b3;
 						break;
 					case "c" :
 						// 制御点準備
@@ -401,7 +421,10 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2, b3], this.BEZIER_SPLIT_COUNT);
-						pList.splice(0, 1);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b3;
 						break;
 					case "S" :
 						// 制御点準備
@@ -417,7 +440,10 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2, b3], this.BEZIER_SPLIT_COUNT);
-						pList.splice(0, 1);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b3;
 						break;
 					case "s" :
 						// 制御点準備
@@ -433,14 +459,51 @@ define(function(require) {
 						};
 						// 近似
 						pList = mathUtil.approximateBezier([b0, b1, b2, b3], this.BEZIER_SPLIT_COUNT);
-						pList.splice(0, 1);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b3;
 						break;
 					// TODO 円弧は未実装
 					case "A":
-						pList.push({x : current.x, y : current.y});
+						b0 = pastVec;
+						b1 = {
+							x : current.x,
+							y : current.y
+						};
+
+						pList = mathUtil.approximateArcWithPoint(
+							current.rx, current.ry,
+							b0,
+							b1,
+							current.largeArcFlag,
+							current.sweepFlag,
+							current.xAxisRotation / 180 * Math.PI,
+							this.BEZIER_SPLIT_COUNT);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b1;
 						break;
 					case "a":
-						pList.push({x : pastVec.x + current.x, y : pastVec.y + current.y});
+						b0 = pastVec;
+						b1 = {
+							x : b0.x + current.x,
+							y : b0.y + current.y
+						};
+
+						pList = mathUtil.approximateArcWithPoint(
+							current.rx, current.ry,
+							b0,
+							b1,
+							current.largeArcFlag,
+							current.sweepFlag,
+							current.xAxisRotation / 180 * Math.PI,
+							this.BEZIER_SPLIT_COUNT);
+						// 始点は前回点なので除去
+						pList.shift();
+						// 終点は誤差を除去
+						pList[pList.length - 1] = b1;
 						break;
 					default:
 						// 無視して次へ
@@ -528,8 +591,8 @@ define(function(require) {
 					element.rx = parseFloat(strList[0], 10);
 					element.ry = parseFloat(strList[1], 10);
 					element.xAxisRotation = parseFloat(strList[2], 10);
-					element.largeArcFlag = parseFloat(strList[3], 10);
-					element.sweepFlag = parseFloat(strList[4], 10);
+					element.largeArcFlag = parseInt(strList[3], 10);
+					element.sweepFlag = parseInt(strList[4], 10);
 					element.x = parseFloat(strList[5], 10);
 					element.y = parseFloat(strList[6], 10);
 				} else {
@@ -591,7 +654,7 @@ define(function(require) {
 
 				if (key.toLowerCase() === "fill") {
 					// fillなし考慮
-					if (val === "none") {
+					if (val.toLowerCase() === "none") {
 						ret.fillStyle = 0;
 						ret.fill = false;
 					} else {
@@ -600,7 +663,7 @@ define(function(require) {
 					}
 				} else if (key.toLowerCase() === "stroke") {
 					// strokeなし考慮
-					if (val === "none") {
+					if (val.toLowerCase() === "none") {
 						ret.strokeStyle = 0;
 						ret.stroke = false;
 					} else {
@@ -618,13 +681,156 @@ define(function(require) {
 				} else if (key.toLowerCase() === "stroke-linejoin") {
 					ret.lineJoin = val;
 				} else if (key.toLowerCase() === "stroke-dasharray") {
-					var strArray = val.split(",");
-					ret.lineDash = [];
-					strArray.forEach(function(str) {
-						ret.lineDash.push(parseFloat(str, 10));
-					});
+					if (val.toLowerCase() === "none") {
+						ret.lineDash = [];
+					} else {
+						var strArray = val.split(",");
+						ret.lineDash = [];
+						strArray.forEach(function(str) {
+							ret.lineDash.push(parseFloat(str, 10));
+						});
+					}
 				} else {
 					// 無視
+				}
+			}
+
+			return ret;
+		},
+
+		/**
+		 * svg文字列を生成する
+		 * @method serializeSvgString
+		 * @param infoList {[]} path情報リスト
+		 * @return {string} xml文字列
+		 */
+		serializeSvgString : function(infoList) {
+			var svg = this.serializeSvg(infoList);
+			var xml_serializer = new XMLSerializer();
+			var text_xml = xml_serializer.serializeToString(svg);
+			return text_xml;
+		},
+
+		/**
+		 * svgタグを生成する
+		 * @method serializeSvg
+		 * @param infoList {[]} path情報リスト
+		 * @return {dom} dom
+		 */
+		serializeSvg : function(infoList) {
+			var dom = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+			// キャンバスサイズ用
+			var width = 100;
+			var height = 100;
+
+			infoList.forEach(function(info) {
+				var path = this.serializePath(info.pointList, info.style);
+				dom.appendChild(path);
+
+				info.pointList.forEach(function(p) {
+					width = Math.max(width, p.x);
+					height = Math.max(height, p.y);
+				}, this);
+			}, this);
+
+			width *= 1.1;
+			height *= 1.1;
+
+			dom.setAttribute("width", width);
+			dom.setAttribute("height", height);
+
+			return dom;
+		},
+
+		/**
+		 * pathタグを生成する
+		 * @method serializePath
+		 * @param pointList {vector[]} 座標リスト
+		 * @param style {} スタイル情報
+		 * @return {dom} dom
+		 */
+		serializePath : function(pointList, style) {
+			var dom = document.createElementNS("http://www.w3.org/2000/svg", "path");
+
+			var d = this.serializePointList(pointList);
+			dom.setAttribute("d", d);
+
+			var style = this.serializeStyle(style);
+			dom.setAttribute("style", style);
+
+			return dom;
+		},
+
+		/**
+		 * 座標リストをd属性文字列に変換する
+		 * @method serializePointList
+		 * @param pointList {vector[]} 座標リスト
+		 * @return {string} d属性文字列
+		 */
+		serializePointList : function(pointList) {
+			var ret = "";
+
+			pointList.forEach(function(p, i) {
+				if (i === 0) {
+					// M
+					ret += "M " + p.x + "," + p.y;
+				} else {
+					// L
+					ret += " L " + p.x + "," + p.y;
+
+					if (i === pointList.length - 1) {
+						// Z
+						ret += " Z";
+					}
+				}
+			}, this);
+
+			return ret;
+		},
+
+		/**
+		 * スタイル情報をstyle属性文字列に変換する
+		 * @method serializeStyle
+		 * @param style {} スタイル情報
+		 * @return {string} style属性文字列
+		 */
+		serializeStyle : function(style) {
+			var ret = "";
+
+			// fill情報
+			if (!style.fill) {
+				ret += "fill:none;";
+			} else {
+				ret += "fill:" + style.fillStyle + ";";
+			}
+			if (style.fillGlobalAlpha) {
+				ret += "fill-opacity:" + style.fillGlobalAlpha + ";";
+			}
+
+			// stroke情報
+			if (!style.stroke) {
+				ret += "stroke:none;";
+			} else {
+				ret += "stroke:" + style.strokeStyle + ";";
+			}
+			if (style.lineWidth) {
+				ret += "stroke-width:" + style.lineWidth + ";";
+			}
+			if (style.strokeGlobalAlpha) {
+				ret += "stroke-opacity:" + style.strokeGlobalAlpha + ";";
+			}
+			if (style.lineCap) {
+				ret += "stroke-linecap:" + style.lineCap + ";";
+			}
+			if (style.lineJoin) {
+				ret += "stroke-linejoin:" + style.lineJoin + ";";
+			}
+			if (style.lineDash) {
+				if (style.lineDash.length > 0) {
+					ret += "stroke-dasharray:" + style.lineDash.join(",") + ";";
+				} else {
+					ret += "stroke-dasharray:none;";
 				}
 			}
 

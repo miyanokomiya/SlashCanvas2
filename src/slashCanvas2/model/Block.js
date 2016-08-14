@@ -50,16 +50,15 @@ define(function(require) {
 			strokeGlobalAlpha : 1,
 			fillGlobalAlpha : 1,
 		};
-	};
 
-	/**
-	 * スラッシュに伴う動きの強さ
-	 * @proeprty slashMovementPower
-	 * @type {number}
-	 + @default 1
-	 * @static
-	 */
-	Constructor.prototype.slashMovementPower = 1;
+		/**
+		 * スラッシュに伴う動きの強さ
+		 * @property slashMovementPower
+		 * @type {number}
+		 + @default 1
+		 */
+		this.slashMovementPower = 1;
+	};
 
 	/**
 	 * 座標リストからbody作成
@@ -196,6 +195,9 @@ define(function(require) {
 		this.body.positionPrev.y -= v.y;
 		this.body.velocity.x = parent.body.velocity.x;
 		this.body.velocity.y = parent.body.velocity.y;
+
+		// その他
+		this.slashMovementPower = parent.slashMovementPower;
 	};
 
 	/**
