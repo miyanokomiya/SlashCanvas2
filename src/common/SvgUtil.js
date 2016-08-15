@@ -2,8 +2,8 @@ define(function(require) {
 	var mathUtil = require("./mathUtil");
 	/**
 	 * SVG関連処理
-	 * @class SvgUtil
-	 * @namespace slashCanvas2
+	 * @class svgUtil
+	 * @namespace MiyanokoLib
 	 * @static
 	 */
 	var util = {
@@ -464,7 +464,6 @@ define(function(require) {
 						// 終点は誤差を除去
 						pList[pList.length - 1] = b3;
 						break;
-					// TODO 円弧は未実装
 					case "A":
 						b0 = pastVec;
 						b1 = {
@@ -577,6 +576,10 @@ define(function(require) {
 
 				// 要素分割
 				var strList = block.trim().split(/,| /);
+				// 空要素削除(カンマとスペースが続くと空が入る)
+				strList = strList.filter(function(str) {
+					return str;
+				})
 
 				if (element.command.search(hLineReg) !== -1) {
 					// 水平

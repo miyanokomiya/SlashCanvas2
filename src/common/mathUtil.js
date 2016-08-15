@@ -2,6 +2,8 @@ define(function(){
 	/**
 	 * 数学計算クラス
 	 * @class mathUtil
+	 * @namespace MiyanokoLib
+	 * @static
 	 */
 	var mathUtil = {
 		/**
@@ -129,6 +131,7 @@ define(function(){
 
 		/**
 		 * 座標リスト複製
+		 * @method pointArrayCopy2D
 		 * @param arr {point[]} 元座標リスト
 		 * @return {point[]} 複製座標リスト
 		 */
@@ -183,6 +186,7 @@ define(function(){
 
 		/**
 		 * a点をbを基準にrad回転する
+		 * @method rotate2D
 		 * @param a {vector} a点
 		 * @param rad {number} 回転ラジアン
 		 * @param b {vector} 基準点(省略なら原点)
@@ -1092,7 +1096,7 @@ define(function(){
 			// 近似単位
 			var unitT = range / size;
 
-			for (i = 0; i < size; i++) {
+			for (i = 0; i <= size; i++) {
 				t = unitT * i + startRadian - radian;
 				p = {
 					x : rx * Math.cos(t),
@@ -1180,7 +1184,7 @@ define(function(){
 				rx, ry,
 				startRadian,
 				endRadian,
-				centers[0],
+				center,
 				radian, size);
 
 			return pList;
