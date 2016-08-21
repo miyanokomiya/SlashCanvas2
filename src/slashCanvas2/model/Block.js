@@ -36,17 +36,43 @@ define(function(require) {
 		this.initialPosition = null;
 
 		/**
+		 * 初期角度
+		 * @property initialRadian
+		 * @type {number}
+		 * @default 0
+		 */
+		this.initialRadian = 0;
+
+		/**
+		 * 画像基準矩形
+		 * @property imageBaseRectangle
+		 * @type {vector}
+		 * @default {x:0,y:0,width:0,height:0}
+		 */
+		this.imageBaseRectangle = {x:0,y:0,width:0,height:0};
+
+		/**
+		 * 画像
+		 * @property image
+		 * @type {}
+		 * @default null
+		 */
+		this.image = null;
+
+		/**
 		 * スタイル
 		 * @property style
 		 * @type {}
 		 */
 		this.style = {
+			fill : true,
 			fillStyle : "green",
+			stroke : true,
 			strokeStyle : "red",
-			lineWidth : 2,
+			lineWidth : 1,
 			lineDash : [],
 			lineCap : "butt",
-			lineJoin : "miter",
+			lineJoin : "bevel",
 			strokeGlobalAlpha : 1,
 			fillGlobalAlpha : 1,
 		};
@@ -86,6 +112,33 @@ define(function(require) {
 
 		var body = Body.create(prop);
 		return body;
+	};
+
+	/**
+	 * 画像からbody作成
+	 * @method createBodyFromImage
+	 * @param img {} 画像
+	 * @param x {number} x位置
+	 * @param y {number} y位置
+	 * @param width {number} 幅
+	 * @param height {number} 高さ
+	 */
+	Constructor.prototype.createBodyFromImage = function(img, x, y, width, height) {
+		this.image = img;
+		var pointList = [
+			{x : x, y : y},
+			{x : x + width, y : y},
+			{x : x + width, y : y + height},
+			{x : x, y : y + height},
+		];
+
+		// 画像基準矩形
+		this.imageBaseRectangle.x = 0;
+		this.imageBaseRectangle.y = 0;
+		this.imageBaseRectangle.width = width;
+		this.imageBaseRectangle.height = height;
+
+		this.createBody(pointList);
 	};
 
 	/**
@@ -196,8 +249,25 @@ define(function(require) {
 		this.body.velocity.x = parent.body.velocity.x;
 		this.body.velocity.y = parent.body.velocity.y;
 
+		// 初期角度
+		this.initialRadian = parent.initialRadian + parent.body.angle;
+
+		// 画像基準矩形
+		this.imageBaseRectangle = {
+			x : parent.imageBaseRectangle.x,
+			y : parent.imageBaseRectangle.y,
+			width : parent.imageBaseRectangle.width,
+			height : parent.imageBaseRectangle.height,
+		};
+		var vec = mathUtil.vecSub2D(this.body.position, parent.body.position);
+		var sin = Math.sin(-this.initialRadian);
+		var cos = Math.cos(-this.initialRadian);
+		this.imageBaseRectangle.x += vec.x * cos - vec.y * sin;
+		this.imageBaseRectangle.y += vec.x * sin + vec.y * cos;
+
 		// その他
 		this.slashMovementPower = parent.slashMovementPower;
+		this.image = parent.image;
 	};
 
 	/**
@@ -274,35 +344,67 @@ define(function(require) {
 	// 描画系
 	//
 
+	/**
+	 * 描画処理
+	 * @method onPaint
+	 * @param ctx {} 描画要素
+	 */
 	Constructor.prototype.onPaint = function(ctx) {
 		var style = this.style;
+		var viewPointList = this.getOriginalPointList();
 
-		ctx.strokeStyle = style.strokeStyle;
-		ctx.lineWidth = style.lineWidth;
-		ctx.lineJoin = style.lineJoin;
-		ctx.fillStyle = style.fillStyle;
-		ctx.setLineDash(style.lineDash);
+		if (viewPointList.length > 1) {
+			ctx.strokeStyle = style.strokeStyle;
+			ctx.lineWidth = style.lineWidth;
+			ctx.lineJoin = style.lineJoin;
+			ctx.fillStyle = style.fillStyle;
+			ctx.setLineDash(style.lineDash);
 
-		ctx.beginPath();
-		if (this.pointList.length > 1) {
-			this.getOriginalPointList().forEach(function(p, i) {
+			ctx.beginPath();
+
+			viewPointList.forEach(function(p, i) {
 				if (i === 0) {
 					ctx.moveTo(p.x, p.y);
 				} else {
 					ctx.lineTo(p.x, p.y);
 				}
 			}, this);
+
+			ctx.closePath();
+
+			if (this.image) {
+				// 画像描画
+				// 設定保存
+				ctx.save();
+				// クリッピング
+				ctx.clip();
+
+				var rectangle = this.imageBaseRectangle;
+
+				// 角度と位置合わせ
+				ctx.translate(this.body.position.x, this.body.position.y);
+				ctx.rotate(this.body.angle + this.initialRadian);
+				ctx.translate(-rectangle.width / 2 - rectangle.x, -rectangle.height / 2 - rectangle.y);
+
+				// 描画
+				ctx.drawImage(this.image, 0, 0, rectangle.width, rectangle.height);
+				// 設定復元
+				ctx.restore();
+			} else {
+				// 画像なし
+				if (style.fill) {
+					ctx.globalAlpha = style.fillGlobalAlpha;
+					ctx.fill();
+				}
+			}
+
+			// 枠
+			if (style.stroke) {
+				ctx.globalAlpha = style.strokeGlobalAlpha;
+				ctx.stroke();
+			}
+			ctx.globalAlpha = 1;
 		}
-		ctx.closePath();
-		if (style.fill) {
-			ctx.globalAlpha = style.fillGlobalAlpha;
-			ctx.fill();
-		}
-		if (style.stroke) {
-			ctx.globalAlpha = style.strokeGlobalAlpha;
-			ctx.stroke();
-		}
-		ctx.globalAlpha = 1;
 	};
 
 	return Constructor;

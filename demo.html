@@ -13,21 +13,15 @@
 		<script>
 		// 第一引数に設置先タグのID、第二引数にオプションを渡す
 		new SlashCanvas2("main", {
-			svgSource : "./resouce/okadablog.svg",		// SVGファイルパス
+			imageSource : "./resouce/OkadaSpace.JPG",		// 画像ファイルパス
 			sound : "./resouce/katana-gesture1.wav",	// スラッシュ音声ファイルパス
 			width : 600,								// フィールド幅
 			height : 400,								// フィールド高さ
 			gravityX : 0,								// 横方向重力
-			gravityY : 0,								// 縦方向重力
-			svgScale : 1 / 2,							// SVG座標のスケール調整
-			svgShift : {
-				x : 30,
-				y : -150
-			},											// SVG座標の移動(スケール調整後に実施)
+			gravityY : 0.1,								// 縦方向重力調整後に実施)
 			slashMovementPower : 1,						// スラッシュ時の動きの強さ
 			slashLineColor : "red",						// スラッシュ線カラー
-			outputSvg : true,							// SVG出力ON
-			// modeType : "pick",						// 手のひらモード
+			imageScale : 0.6
 		});
 
 		new SlashCanvas2("sub1", {
@@ -39,6 +33,6 @@
 			sound : "./resouce/katana-gesture1.wav",
 			slashMovementPower : 5,
 		});
-		</script
+		</script>
 	</body>
 </html>

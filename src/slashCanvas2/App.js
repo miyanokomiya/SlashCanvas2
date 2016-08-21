@@ -166,6 +166,22 @@ define(function(require) {
 		 */
 		this.slashLineColor = option.slashLineColor || "yellow";
 
+		/**
+		 * 画像ソースファイルの場所
+		 * @property imageSource
+		 * @type {string}
+		 * @default null
+		 */
+		this.imageSource = option.imageSource || null;
+
+		/**
+		 * フィールドに対する画像スケール
+		 * @property imageScale
+		 * @type {number}
+		 * @default 1
+		 */
+		this.imageScale = option.imageScale || 0.6;
+
 		//
 		// UI系
 		//
@@ -207,37 +223,24 @@ define(function(require) {
 
 		this.initWorld();
 
-		// SVGリソース取得
-		var req = new XMLHttpRequest();
-		req.open("get", this.svgSource, true);
-		req.onload = function() {
-			// パース
-			var svgInfoList = svgUtil.loadSvgGraphicsPath(req.responseText);
-
-			// ブロック作成
-			var bodyList = [];
-			for (var i = 0; i < svgInfoList.length; i++) {
-				var info = svgInfoList[i];
-				// 座標調整
-				info.pointList.forEach(function(p) {
-					p.x = p.x * self.svgScale + self.svgShift.x;
-					p.y = p.y * self.svgScale + self.svgShift.y;
-				});
-				block = new Block();
-				block.slashMovementPower = self.option.slashMovementPower;
-				block.createBody(info.pointList, info.style);
-				self.blockList.push(block);
-				bodyList = bodyList.concat(block.body);
-			}
-
-			World.add(self.engine.world, bodyList);
-
-			self.initButton();
-			if (self.modeType === "slash") {
-				self.bindCanvasEvent(self.render.canvas);
-			}
-		};
-		req.send(null);
+		if (this.svgSource) {
+			// SVGリソース取得
+			var req = new XMLHttpRequest();
+			req.open("get", this.svgSource, true);
+			req.onload = function() {
+				self.initSvgBody(req.responseText);
+			};
+			req.send(null);
+		} else if (this.imageSource) {
+			// 画像リソース取得
+			var img = new Image();
+			img.onload = function(e) {
+				self.initImageBody(img);
+			};
+			img.src = self.imageSource;
+		} else {
+			console.log("The option of 'svgSource' or 'imageSource' must be required.");
+		}
 	};
 
 	/**
@@ -262,8 +265,6 @@ define(function(require) {
 		this.canvas = this.render.canvas;
 		this.render.canvas.width = this.width;
 		this.render.canvas.height = this.height;
-
-		this.resetBodies();
 
 		Engine.run(this.engine);
 		Render.run(this.render);
@@ -299,6 +300,88 @@ define(function(require) {
 				return (line.life > 0);
 			});
 		});
+	};
+
+	/**
+	 * 画像ボディ初期化
+	 * @method initImageBody
+	 * @param img {} 画像
+	 */
+	Constructor.prototype.initImageBody = function(img) {
+		var self = this;
+
+		this.resetBodies();
+
+		// 画面サイズに対する比率
+		var rate = self.imageScale;
+		var imageRate = img.width / img.height;
+		var scaledWidth = 0;
+		var scaledHeight = 0;
+
+		if (imageRate < 1) {
+			// 縦基準
+			scaledHeight = self.height * rate;
+			scaledWidth = scaledHeight * imageRate;
+		} else {
+			// 横基準
+			scaledWidth = self.width * rate;
+			scaledHeight = scaledWidth / imageRate;
+		}
+
+		var block = new Block();
+		// オプション値を渡す
+		block.slashMovementPower = self.option.slashMovementPower;
+		block.style.strokeStyle = self.slashLineColor;
+		block.createBodyFromImage(
+			img,
+			(self.width - scaledWidth) / 2,
+			(self.height - scaledHeight) / 2,
+			scaledWidth, scaledHeight);
+		self.blockList.push(block);
+
+		World.add(self.engine.world, [block.body]);
+
+		self.initButton();
+		if (self.modeType === "slash") {
+			self.bindCanvasEvent(self.render.canvas);
+		}
+	};
+
+	/**
+	 * svgボディ初期化
+	 * @method initSvgBody
+	 * @param svgString {string} SVG文字列
+	 */
+	Constructor.prototype.initSvgBody = function(svgString) {
+		var self = this;
+
+		this.resetBodies();
+		
+		// パース
+		var svgInfoList = svgUtil.loadSvgGraphicsPath(svgString);
+
+		// ブロック作成
+		var bodyList = [];
+		for (var i = 0; i < svgInfoList.length; i++) {
+			var info = svgInfoList[i];
+			// 座標調整
+			info.pointList.forEach(function(p) {
+				p.x = p.x * self.svgScale + self.svgShift.x;
+				p.y = p.y * self.svgScale + self.svgShift.y;
+			});
+			block = new Block();
+			block.slashMovementPower = self.option.slashMovementPower;
+			block.createBody(info.pointList, info.style);
+			self.blockList.push(block);
+			bodyList = bodyList.concat(block.body);
+		}
+
+		World.add(self.engine.world, bodyList);
+
+		self.initButton();
+		if (self.modeType === "slash") {
+			self.bindCanvasEvent(self.render.canvas);
+		}
 	};
 
 	/**
@@ -500,5 +583,6 @@ define(function(require) {
 			slash.length = 0;
 		});
 	};
+
 	return Constructor;
 });
